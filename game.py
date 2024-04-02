@@ -370,6 +370,10 @@ def main(window):
         if check_lost(locked_positions):
             run = False
 
+
+window = pygame.display.set_mode((s_width, s_height))
+pygame.display.set_caption('Tetris')
+
 change_piece = False
 current_piece = get_shape()
 next_piece = get_shape()
@@ -379,10 +383,24 @@ fall_speed = 1
 level_time = 0
 score = 0
 last_score = get_max_score()
+locked_positions = {}
 
+def reset():
+    global fall_time, level_time, fall_speed, current_piece, change_piece, window, score, last_score, next_piece, locked_positions
+    change_piece = False
+    current_piece = get_shape()
+    next_piece = get_shape()
+    clock = pygame.time.Clock()
+    fall_time = 0
+    fall_speed = 1
+    level_time = 0
+    score = 0
+    last_score = get_max_score()
+    locked_positions = {}
 
 def paly_game(action):
-    locked_positions = {}
+    global fall_time, level_time, fall_speed, current_piece, change_piece, window, score, last_score, next_piece, locked_positions
+    
     grid = create_grid(locked_positions)
 
     # helps run the same on every computer
@@ -409,25 +427,22 @@ def paly_game(action):
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            run = False
             pygame.display.quit()
             quit()
-
-    # action = [1,0,0,0]
     
-    if action[0] == 1:
+    if action[2] == 1:
         current_piece.x -= 1  # move x position left
         if not valid_space(current_piece, grid):
             current_piece.x += 1
-    elif action[1] == 1:
+    elif action[3] == 1:
         current_piece.x += 1  # move x position right
         if not valid_space(current_piece, grid):
             current_piece.x -= 1
-    elif action[2] == 1:
+    elif action[1] == 1:
         current_piece.y += 1
         if not valid_space(current_piece, grid):
             current_piece.y -= 1
-    elif action[3] == 1:
+    elif action[0] == 1:
         current_piece.rotation = current_piece.rotation + 1 % len(current_piece.shape)
         if not valid_space(current_piece, grid):
             current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
@@ -456,26 +471,11 @@ def paly_game(action):
     draw_window(window, grid, score, last_score)
     draw_next_shape(next_piece, window)
     pygame.display.update()
-
+    
     if check_lost(locked_positions):
-        run = False
+        return True
 
-def main_menu(window):
-    run = True
-    while run:
-        draw_text_middle('Press any key to begin', 50, (255, 255, 255), window)
-        pygame.display.update()
+    return False
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            elif event.type == pygame.KEYDOWN:
-                main(window)
 
-    pygame.quit()
 
-if __name__ == '__main__':
-    win = pygame.display.set_mode((s_width, s_height))
-    pygame.display.set_caption('Tetris')
-
-    main_menu(win)  # start game
