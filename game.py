@@ -28,6 +28,8 @@ play_width = 300  # play window width; 300/10 = 30 width per block
 play_height = 600  # play window height; 600/20 = 20 height per block
 block_size = 30  # size of block
 
+
+
 top_left_x = (s_width - play_width) // 2
 top_left_y = s_height - play_height - 50
 
@@ -367,6 +369,96 @@ def main(window):
 
         if check_lost(locked_positions):
             run = False
+
+change_piece = False
+current_piece = get_shape()
+next_piece = get_shape()
+clock = pygame.time.Clock()
+fall_time = 0
+fall_speed = 1
+level_time = 0
+score = 0
+last_score = get_max_score()
+
+
+def paly_game(action):
+    locked_positions = {}
+    grid = create_grid(locked_positions)
+
+    # helps run the same on every computer
+    # add time since last tick() to fall_time
+    fall_time += clock.get_rawtime()  # returns in milliseconds
+    level_time += clock.get_rawtime()
+
+    clock.tick()  # updates clock
+
+    if level_time/1000 > 5:    # make the difficulty harder every 10 seconds
+        level_time = 0
+        if fall_speed > 1:   # until fall speed is 0.15
+            fall_speed -= 0.2
+
+    if fall_time / 1000 > fall_speed:
+        fall_time = 0
+        current_piece.y += 1
+        if not valid_space(current_piece, grid) and current_piece.y > 0:
+            current_piece.y -= 1
+            # since only checking for down - either reached bottom or hit another piece
+            # need to lock the piece position
+            # need to generate new piece
+            change_piece = True
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+            pygame.display.quit()
+            quit()
+
+    # action = [1,0,0,0]
+    
+    if action[0] == 1:
+        current_piece.x -= 1  # move x position left
+        if not valid_space(current_piece, grid):
+            current_piece.x += 1
+    elif action[1] == 1:
+        current_piece.x += 1  # move x position right
+        if not valid_space(current_piece, grid):
+            current_piece.x -= 1
+    elif action[2] == 1:
+        current_piece.y += 1
+        if not valid_space(current_piece, grid):
+            current_piece.y -= 1
+    elif action[3] == 1:
+        current_piece.rotation = current_piece.rotation + 1 % len(current_piece.shape)
+        if not valid_space(current_piece, grid):
+            current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
+            
+    piece_pos = convert_shape_format(current_piece)
+
+    # draw the piece on the grid by giving color in the piece locations
+    for i in range(len(piece_pos)):
+        x, y = piece_pos[i]
+        if y >= 0:
+            grid[y][x] = current_piece.color
+
+    if change_piece:  # if the piece is locked
+        for pos in piece_pos:
+            p = (pos[0], pos[1])
+            locked_positions[p] = current_piece.color       # add the key and value in the dictionary
+        current_piece = next_piece
+        next_piece = get_shape()
+        change_piece = False
+        score += clear_rows(grid, locked_positions) * 10    # increment score by 10 for every row cleared
+        update_score(score)
+
+        if last_score < score:
+            last_score = score
+
+    draw_window(window, grid, score, last_score)
+    draw_next_shape(next_piece, window)
+    pygame.display.update()
+
+    if check_lost(locked_positions):
+        run = False
 
 def main_menu(window):
     run = True
