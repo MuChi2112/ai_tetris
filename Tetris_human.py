@@ -383,6 +383,16 @@ def main(window):
     last_score = get_max_score()
 
     while run:
+        
+        print(current_piece.x )
+        print(current_piece.y)
+        print(current_piece.shape)
+        
+        for i in range(len(shapes)):
+            if current_piece.shape == shapes[i]:
+                print("index" + str(i))
+        
+        
         # need to constantly make new grid as locked positions always change
         grid = create_grid(locked_positions)
 
@@ -439,6 +449,8 @@ def main(window):
 
         piece_pos = convert_shape_format(current_piece)
 
+        print(piece_pos)
+
         # draw the piece on the grid by giving color in the piece locations
         for i in range(len(piece_pos)):
             x, y = piece_pos[i]
@@ -461,6 +473,8 @@ def main(window):
         draw_window(window, grid, score, last_score)
         draw_next_shape(next_piece, window)
         pygame.display.update()
+
+        print(locked_positions)
 
         if check_lost(locked_positions):
             run = False

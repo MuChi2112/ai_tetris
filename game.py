@@ -280,7 +280,7 @@ def main(window):
     next_piece = get_shape()
     clock = pygame.time.Clock()
     fall_time = 0
-    fall_speed = 1
+    fall_speed = 0.1
     level_time = 0
     score = 0
     last_score = get_max_score()
@@ -400,9 +400,10 @@ def reset():
 
 def paly_game(action):
     global fall_time, level_time, fall_speed, current_piece, change_piece, window, score, last_score, next_piece, locked_positions
-    
+        
     grid = create_grid(locked_positions)
 
+    reward = 0
     # helps run the same on every computer
     # add time since last tick() to fall_time
     fall_time += clock.get_rawtime()  # returns in milliseconds
@@ -448,6 +449,7 @@ def paly_game(action):
             current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
             
     piece_pos = convert_shape_format(current_piece)
+    # print(piece_pos)
 
     # draw the piece on the grid by giving color in the piece locations
     for i in range(len(piece_pos)):
@@ -462,7 +464,8 @@ def paly_game(action):
         current_piece = next_piece
         next_piece = get_shape()
         change_piece = False
-        score += clear_rows(grid, locked_positions) * 10    # increment score by 10 for every row cleared
+        reward = clear_rows(grid, locked_positions) * 10
+        score += reward    # increment score by 10 for every row cleared
         update_score(score)
 
         if last_score < score:
@@ -472,10 +475,10 @@ def paly_game(action):
     draw_next_shape(next_piece, window)
     pygame.display.update()
     
-    if check_lost(locked_positions):
-        return True
+    if check_lost(locked_positions):      
+        return -100, True, score-100
 
-    return False
+    return reward, False, score
 
 
 
