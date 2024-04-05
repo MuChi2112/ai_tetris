@@ -298,18 +298,18 @@ def main(window):
 
         if level_time/1000 > 5:    # make the difficulty harder every 10 seconds
             level_time = 0
-            if fall_speed > 1:   # until fall speed is 0.15
-                fall_speed -= 0.2
+            # if fall_speed > 1:   # until fall speed is 0.15
+            #     fall_speed -= 0.2
 
-        if fall_time / 1000 > fall_speed:
-            fall_time = 0
-            current_piece.y += 1
-            if not valid_space(current_piece, grid) and current_piece.y > 0:
-                current_piece.y -= 1
-                # since only checking for down - either reached bottom or hit another piece
-                # need to lock the piece position
-                # need to generate new piece
-                change_piece = True
+        # if fall_time / 1 > fall_speed:
+        #     fall_time = 0
+        current_piece.y += 1
+        if not valid_space(current_piece, grid) and current_piece.y > 0:
+            current_piece.y -= 1
+            # since only checking for down - either reached bottom or hit another piece
+            # need to lock the piece position
+            # need to generate new piece
+            change_piece = True
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -413,8 +413,8 @@ def paly_game(action):
 
     if level_time/1000 > 5:    # make the difficulty harder every 10 seconds
         level_time = 0
-        if fall_speed > 1:   # until fall speed is 0.15
-            fall_speed -= 0.2
+        # if fall_speed > 1:   # until fall speed is 0.15
+        #     fall_speed -= 0.2
 
     if fall_time / 1000 > fall_speed:
         fall_time = 0
@@ -464,7 +464,7 @@ def paly_game(action):
         current_piece = next_piece
         next_piece = get_shape()
         change_piece = False
-        reward = clear_rows(grid, locked_positions) * 10
+        reward = reward + clear_rows(grid, locked_positions) * 20
         score += reward    # increment score by 10 for every row cleared
         update_score(score)
 

@@ -377,7 +377,7 @@ def main(window):
     next_piece = get_shape()
     clock = pygame.time.Clock()
     fall_time = 0
-    fall_speed = 0.35
+    fall_speed = 1
     level_time = 0
     score = 0
     last_score = get_max_score()

@@ -19,7 +19,7 @@ class Agent:
         self.epsilon = 0 # randomness
         self.gamma = 0.9 # discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
-        self.model = Linear_QNet(STATE_NUM, 256, 5)
+        self.model = Linear_QNet(STATE_NUM, 1024, 4)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
 
@@ -68,10 +68,18 @@ class Agent:
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
         self.epsilon = 80 - self.n_games
-        final_move = [0,0,0,0,0]
+        final_move = [0,0,0,0]
 
-        if random.randint(0, 200) < self.epsilon:
-            move = random.randint(0, 4)
+        piece_pos = game.convert_shape_format(game.current_piece)
+        
+        for (x, y) in piece_pos:
+            if y < 0:
+                final_move[1] = 1
+                return final_move
+
+
+        if random.randint(0, 200) < self.epsilon:       
+            move = random.randint(0, 3)
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
