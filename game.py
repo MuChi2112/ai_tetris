@@ -1,6 +1,9 @@
+import os
 import random
 import pygame
 import gameShape
+
+is_background_mode = False
 
 """
 10 x 20 grid
@@ -48,7 +51,6 @@ shape_colors = [(0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 255, 0), (255, 16
 
 # class to represent each of the pieces
 
-
 class Piece(object):
     def __init__(self, x, y, shape):
         self.x = x
@@ -57,6 +59,13 @@ class Piece(object):
         self.color = shape_colors[shapes.index(shape)]  # choose color from the shape_color list
         self.rotation = 0  # chooses the rotation according to index
 
+
+def init_game(is_background_mode):
+    if is_background_mode:
+        os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    pygame.init()
+    window = pygame.display.set_mode((s_width, s_height))
+    return window
 
 # initialise the grid
 def create_grid(locked_pos={}):
@@ -185,69 +194,71 @@ def clear_rows(grid, locked):
 
 # draws the upcoming piece
 def draw_next_shape(piece, surface):
-    font = pygame.font.Font(fontpath, 30)
-    label = font.render('Next shape', 1, (255, 255, 255))
+    if not is_background_mode:
+        font = pygame.font.Font(fontpath, 30)
+        label = font.render('Next shape', 1, (255, 255, 255))
 
-    start_x = top_left_x + play_width + 50
-    start_y = top_left_y + (play_height / 2 - 100)
+        start_x = top_left_x + play_width + 50
+        start_y = top_left_y + (play_height / 2 - 100)
 
-    shape_format = piece.shape[piece.rotation % len(piece.shape)]
+        shape_format = piece.shape[piece.rotation % len(piece.shape)]
 
-    for i, line in enumerate(shape_format):
-        row = list(line)
-        for j, column in enumerate(row):
-            if column == '0':
-                pygame.draw.rect(surface, piece.color, (start_x + j*block_size, start_y + i*block_size, block_size, block_size), 0)
+        for i, line in enumerate(shape_format):
+            row = list(line)
+            for j, column in enumerate(row):
+                if column == '0':
+                    pygame.draw.rect(surface, piece.color, (start_x + j*block_size, start_y + i*block_size, block_size, block_size), 0)
 
-    surface.blit(label, (start_x, start_y - 30))
+        surface.blit(label, (start_x, start_y - 30))
 
-    # pygame.display.update()
+        # pygame.display.update()
 
 
 # draws the content of the window
 def draw_window(surface, grid, score=0, last_score=0):
-    surface.fill((0, 0, 0))  # fill the surface with black
+    if not is_background_mode:
+        surface.fill((0, 0, 0))  # fill the surface with black
 
-    pygame.font.init()  # initialise font
-    font = pygame.font.Font(fontpath_mario, 65 )
-    label = font.render('TETRIS', 1, (255, 255, 255))  # initialise 'Tetris' text with white
+        pygame.font.init()  # initialise font
+        font = pygame.font.Font(fontpath_mario, 65 )
+        label = font.render('TETRIS', 1, (255, 255, 255))  # initialise 'Tetris' text with white
 
-    surface.blit(label, ((top_left_x + play_width / 2) - (label.get_width() / 2), 30))  # put surface on the center of the window
+        surface.blit(label, ((top_left_x + play_width / 2) - (label.get_width() / 2), 30))  # put surface on the center of the window
 
-    # current score
-    font = pygame.font.Font(fontpath, 30)
-    label = font.render('SCORE   ' + str(score) , 1, (255, 255, 255))
+        # current score
+        font = pygame.font.Font(fontpath, 30)
+        label = font.render('SCORE   ' + str(score) , 1, (255, 255, 255))
 
-    start_x = top_left_x + play_width + 50
-    start_y = top_left_y + (play_height / 2 - 100)
+        start_x = top_left_x + play_width + 50
+        start_y = top_left_y + (play_height / 2 - 100)
 
-    surface.blit(label, (start_x, start_y + 200))
+        surface.blit(label, (start_x, start_y + 200))
 
-    # last score
-    label_hi = font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
+        # last score
+        label_hi = font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
 
-    start_x_hi = top_left_x - 240
-    start_y_hi = top_left_y + 200
+        start_x_hi = top_left_x - 240
+        start_y_hi = top_left_y + 200
 
-    surface.blit(label_hi, (start_x_hi + 20, start_y_hi + 200))
+        surface.blit(label_hi, (start_x_hi + 20, start_y_hi + 200))
 
-    # draw content of the grid
-    for i in range(row):
-        for j in range(col):
-            # pygame.draw.rect()
-            # draw a rectangle shape
-            # rect(Surface, color, Rect, width=0) -> Rect
-            pygame.draw.rect(surface, grid[i][j],
-                             (top_left_x + j * block_size, top_left_y + i * block_size, block_size, block_size), 0)
+        # draw content of the grid
+        for i in range(row):
+            for j in range(col):
+                # pygame.draw.rect()
+                # draw a rectangle shape
+                # rect(Surface, color, Rect, width=0) -> Rect
+                pygame.draw.rect(surface, grid[i][j],
+                                (top_left_x + j * block_size, top_left_y + i * block_size, block_size, block_size), 0)
 
-    # draw vertical and horizontal grid lines
-    draw_grid(surface)
+        # draw vertical and horizontal grid lines
+        draw_grid(surface)
 
-    # draw rectangular border around play area
-    border_color = (255, 255, 255)
-    pygame.draw.rect(surface, border_color, (top_left_x, top_left_y, play_width, play_height), 4)
+        # draw rectangular border around play area
+        border_color = (255, 255, 255)
+        pygame.draw.rect(surface, border_color, (top_left_x, top_left_y, play_width, play_height), 4)
 
-    # pygame.display.update()
+        # pygame.display.update()
 
 
 # update the score txt file with high score
@@ -365,13 +376,15 @@ def main(window):
 
         draw_window(window, grid, score, last_score)
         draw_next_shape(next_piece, window)
-        pygame.display.update()
+        if not is_background_mode:
+            pygame.display.update()
 
         if check_lost(locked_positions):
             run = False
 
 
-window = pygame.display.set_mode((s_width, s_height))
+window = init_game(is_background_mode)
+
 pygame.display.set_caption('Tetris')
 
 change_piece = False
@@ -483,7 +496,8 @@ def paly_game(action):
 
     draw_window(window, grid, score, last_score)
     draw_next_shape(next_piece, window)
-    pygame.display.update()
+    if not is_background_mode:
+        pygame.display.update()
     
     if check_lost(locked_positions):      
         return -100, True, score-100
