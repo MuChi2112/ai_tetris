@@ -452,8 +452,10 @@ def paly_game(action):
     # print(piece_pos)
 
     # draw the piece on the grid by giving color in the piece locations
+    y_max = 0
     for i in range(len(piece_pos)):
         x, y = piece_pos[i]
+        y_max = max(y, y_max)
         if y >= 0:
             grid[y][x] = current_piece.color
 
@@ -464,7 +466,15 @@ def paly_game(action):
         current_piece = next_piece
         next_piece = get_shape()
         change_piece = False
-        reward = reward + clear_rows(grid, locked_positions) * 20
+        reward = reward + clear_rows(grid, locked_positions) * 100
+        reward_temp = 0
+        if reward == 0:
+            for i in locked_positions :
+                if y_max == i[1]:
+                    reward_temp += 1
+
+        reward_temp *= y_max // 5
+        reward += reward_temp
         score += reward    # increment score by 10 for every row cleared
         update_score(score)
 
