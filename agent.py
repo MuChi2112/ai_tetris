@@ -5,12 +5,14 @@ from collections import deque
 import game
 from model import Linear_QNet, QTrainer
 from helper import plot
+import copy
+
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
 LR = 0.001
 
-STATE_NUM = game.col * game.row + len(game.shapes)*2
+STATE_NUM = game.col * game.row + 5 + 7
 
 class Agent:
     def __init__(self, epsilon_decay=0.995, min_epsilon=0.1, load_model=None):
@@ -27,6 +29,153 @@ class Agent:
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
 
+    def to2DBoard(self, locked_positions):
+        board = [ [0]*game.col for _ in range(game.row) ]
+        for y in range(game.row):
+            for x in range(game.col):
+                if (x, y) in game.locked_positions:
+                    board[y][x] = 1
+                    
+        # print(board)
+        return board
+
+    def calc_heuristics(self, board, x):
+        """Calculate heuristics
+
+        The heuristics are composed by: number of holes, number of blocks above
+        hole and maximum height.
+
+        """
+        total_holes        = 0
+        locals_holes       = 0
+        blocks_above_holes = 0
+        sum_heights        = 0
+
+        for y in range(game.row-1, -1,-1):
+            if board[y][x] == 0:
+                locals_holes += 1
+            else:
+                sum_heights += game.row-y
+
+                if locals_holes > 0:
+                    total_holes += locals_holes
+                    locals_holes = 0
+
+                if total_holes > 0:
+                    blocks_above_holes += 1
+
+        return total_holes, blocks_above_holes, sum_heights
+
+    def cal_init(self, board2D):
+        total_holes          = 0
+        total_blocking_bocks = 0
+
+        for x2 in range(0, game.col):
+            b = self.calc_heuristics(board2D, x2)
+
+            total_holes          += b[0]
+            total_blocking_bocks += b[1]
+
+
+        return total_holes, total_blocking_bocks
+
+
+    def calculate_edges(self, new_board, piece_pos, rows, cols):
+        floor_edges = 0
+        wall_edges = 0
+        block_edges = 0
+        
+        for x, y in piece_pos:
+            # 檢查與地板的連接
+            
+            if y + 1 == rows:
+                floor_edges += 1
+            elif new_board[y + 1][x] == 1:
+                block_edges += 1
+            
+            # 檢查與左側牆壁的連接
+            if x == 0:
+                wall_edges += 1
+            elif new_board[y][x - 1] == 1:
+                block_edges += 1
+                
+            # 檢查與右側牆壁的連接
+            if x + 1 == cols:
+                wall_edges += 1
+            elif new_board[y][x + 1] == 1:
+                block_edges += 1
+                
+            # 檢查與上方方塊的連接（僅當y>0時檢查，避免索引出界）
+            if y > 0 and new_board[y - 1][x] == 1:
+                block_edges += 1
+
+        return floor_edges, wall_edges, block_edges
+
+
+    def calcu_remove_lines(self, board):
+        # 初始化移除行數計數器
+        remove_lines = 0
+
+        # 遊戲板的行數
+        rows = len(board)
+        # 遊戲板的列數
+        cols = len(board[0])
+
+        # 從底部向上遍歷每一行
+        for i in range(rows-1, -1, -1):
+            # 檢查這一行是否已經完全被方塊填滿
+            full = True
+            for j in range(cols):
+                if board[i][j] == 0:  # 假設0代表空位
+                    full = False
+                    break
+
+            # 如果這一行完全被填滿，則應該被消除
+            if full:
+                # 更新移除行數
+                remove_lines += 1
+
+        # 返回總共移除的行數
+        return remove_lines
+
+        
+
+    def calcu_nxt_move(self, total_holes_bef, total_blocking_bocks_bef):
+        grid = game.create_grid(game.locked_positions)
+        next_move_piece = copy.deepcopy(game.current_piece)
+        
+        while game.valid_space(next_move_piece, grid):
+            next_move_piece.y+=1
+            
+        next_move_piece.y-=1
+            
+        new_board = self.to2DBoard(game.locked_positions)
+        piece_pos = game.convert_shape_format(next_move_piece)
+        
+        floor_edges, wall_edges, block_edges = self.calculate_edges(new_board, piece_pos, game.row, game.col)
+        
+        for x,y in piece_pos:
+            new_board[y][x] = 1
+                
+        remove_lines = self.calcu_remove_lines(new_board)
+        
+        
+        total_holes          = 0
+        total_blocking_bocks = 0
+        max_height = 0
+
+        for x2 in range(0, game.col):
+            b = self.calc_heuristics(new_board, x2)
+
+            total_holes          += b[0]
+            total_blocking_bocks += b[1]
+            max_height += b[2]
+            
+        new_holes = total_holes_bef - total_holes
+        new_blocking_bocks = total_blocking_bocks_bef - total_blocking_bocks
+
+        return max_height, remove_lines, new_holes, new_blocking_bocks, block_edges, floor_edges, wall_edges
+
     def get_state(self):
         
         temp = [0] * STATE_NUM
@@ -36,19 +185,31 @@ class Agent:
                 if (x, y) in game.locked_positions:
                     temp[(y * 10) + (x + 1) - 1] = 1
 
-        for j in range(len(game.shapes)):
-            if game.shapes[j] == game.current_piece.shape:
-                temp[(game.col * game.row) +  j] = 1
+        # shape index
+        temp[(game.col * game.row) +1 -1 ] =  game.shapes.index(game.current_piece.shape)
+        # rotation
+        temp[(game.col * game.row) +2 -1 ] = game.current_piece.rotation
+        # x
+        temp[(game.col * game.row) +3 -1 ] = game.current_piece.x        
+        # y
+        temp[(game.col * game.row) +4 -1 ] = game.current_piece.y
 
-        for j in range(len(game.shapes)):
-            if game.shapes[j] == game.next_piece.shape:
-                temp[(game.col * game.row) + len(game.shapes) +  j] = 1
-
-        piece_pos = game.convert_shape_format(game.current_piece)
+        # next shape index
+        temp[(game.col * game.row) +5 -1 ] = game.shapes.index(game.next_piece.shape)
+                
+        board2D = self.to2DBoard(game.locked_positions)
         
-        for (x, y) in piece_pos:
-            if y >= 0:
-                temp[(y * 10) + (x + 1) - 1] = 1
+        total_holes, total_blocking_bocks = self.cal_init(board2D)        
+        
+        max_height, remove_lines, new_holes, new_blocking_bocks, block_edges, floor_edges, wall_edges = self.calcu_nxt_move(total_holes, total_blocking_bocks)
+        
+        temp[(game.col * game.row) +6 -1 ] = max_height
+        temp[(game.col * game.row) +7 -1 ] = remove_lines
+        temp[(game.col * game.row) +8 -1 ] = new_holes
+        temp[(game.col * game.row) +9 -1 ] = new_blocking_bocks
+        temp[(game.col * game.row) +10 -1 ] = block_edges
+        temp[(game.col * game.row) +11 -1 ] = floor_edges
+        temp[(game.col * game.row) +12 -1 ] = wall_edges
         
         return temp
 
@@ -102,9 +263,10 @@ def train(max_games=1000, train_model=True):
     plot_mean_scores = []
     total_score = 0
     record = 0
-    agent = Agent(load_model='./model/model.pth')
+
 
     if not train_model:
+        agent = Agent(load_model='./model/model.pth')
         while True:
             state_old = agent.get_state()
             final_move = agent.get_action(state_old, train_model)
@@ -118,6 +280,7 @@ def train(max_games=1000, train_model=True):
                 print('Game', agent.n_games, 'Score', score, 'Record:', record)
             
     else:
+        agent = Agent()
         while agent.n_games < max_games:
             # get old state
             state_old = agent.get_state()
@@ -166,4 +329,4 @@ def train(max_games=1000, train_model=True):
 
 
 if __name__ == '__main__':
-    train(train_model=False)
+    train(train_model=True)
