@@ -479,15 +479,15 @@ def paly_game(action):
         current_piece = next_piece
         next_piece = get_shape()
         change_piece = False
-        reward = reward + clear_rows(grid, locked_positions) * 100
-        reward_temp = 0
-        if reward == 0:
-            for i in locked_positions :
-                if y_max == i[1]:
-                    reward_temp += 1
+        reward = reward + clear_rows(grid, locked_positions) * 10
+        # reward_temp = 0
+        # if reward == 0:
+        #     for i in locked_positions :
+        #         if y_max == i[1]:
+        #             reward_temp += 1
 
-        reward_temp *= y_max // 5
-        reward += reward_temp
+        # reward_temp *= y_max // 5
+        # reward += reward_temp
         score += reward    # increment score by 10 for every row cleared
         update_score(score)
 

@@ -132,11 +132,16 @@ class Agent:
 
             # 如果這一行完全被填滿，則應該被消除
             if full:
+                # 從遊戲板中移除這一行
+                del board[i]
+                # 在遊戲板的頂部加入一新的空白行
+                board.insert(0, [0 for _ in range(cols)])
                 # 更新移除行數
                 remove_lines += 1
 
         # 返回總共移除的行數
         return remove_lines
+
 
         
 
@@ -211,6 +216,8 @@ class Agent:
         temp[(game.col * game.row) +11 -1 ] = floor_edges
         temp[(game.col * game.row) +12 -1 ] = wall_edges
         
+        print(remove_lines)
+        
         return temp
 
     def remember(self, state, action, reward, next_state, done):
@@ -233,7 +240,6 @@ class Agent:
     def get_action(self, state, train_model=True):
         
         # random moves: tradeoff exploration / exploitation
-        self.epsilon = 80 - self.n_games
         final_move = [0,0,0,0]
 
         piece_pos = game.convert_shape_format(game.current_piece)
