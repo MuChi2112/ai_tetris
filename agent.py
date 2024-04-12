@@ -12,7 +12,7 @@ MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
 LR = 0.001
 
-STATE_NUM = game.col * game.row + 5 + 7
+STATE_NUM = 5 + 80
 
 class Agent:
     def __init__(self, epsilon_decay=0.995, min_epsilon=0.1, load_model=None):
@@ -145,10 +145,18 @@ class Agent:
 
         
 
-    def calcu_nxt_move(self, total_holes_bef, total_blocking_bocks_bef):
+    def calcu_nxt_move(self, x , total_holes_bef, total_blocking_bocks_bef):
+
+        is_valid = 0
+
         grid = game.create_grid(game.locked_positions)
         next_move_piece = copy.deepcopy(game.current_piece)
-        
+        next_move_piece.x = x
+
+        if not game.valid_space(next_move_piece, grid) :
+            is_valid = -1
+            return is_valid, 0, 0, 0, 0, 0, 0, 0
+
         while game.valid_space(next_move_piece, grid):
             next_move_piece.y+=1
             
@@ -179,44 +187,42 @@ class Agent:
         new_holes = total_holes_bef - total_holes
         new_blocking_bocks = total_blocking_bocks_bef - total_blocking_bocks
 
-        return max_height, remove_lines, new_holes, new_blocking_bocks, block_edges, floor_edges, wall_edges
+        return is_valid, max_height, remove_lines, new_holes, new_blocking_bocks, block_edges, floor_edges, wall_edges
 
     def get_state(self):
-        
+
         temp = [0] * STATE_NUM
-        
-        for y in range(game.row):
-            for x in range(game.col):
-                if (x, y) in game.locked_positions:
-                    temp[(y * 10) + (x + 1) - 1] = 1
 
         # shape index
-        temp[(game.col * game.row) +1 -1 ] =  game.shapes.index(game.current_piece.shape)
+        temp[ +1 -1 ] =  game.shapes.index(game.current_piece.shape)
         # rotation
-        temp[(game.col * game.row) +2 -1 ] = game.current_piece.rotation
+        temp[ +2 -1 ] = game.current_piece.rotation
         # x
-        temp[(game.col * game.row) +3 -1 ] = game.current_piece.x        
+        temp[ +3 -1 ] = game.current_piece.x        
         # y
-        temp[(game.col * game.row) +4 -1 ] = game.current_piece.y
+        temp[ +4 -1 ] = game.current_piece.y
 
         # next shape index
-        temp[(game.col * game.row) +5 -1 ] = game.shapes.index(game.next_piece.shape)
+        temp[ +5 -1 ] = game.shapes.index(game.next_piece.shape)
                 
         board2D = self.to2DBoard(game.locked_positions)
         
         total_holes, total_blocking_bocks = self.cal_init(board2D)        
+
+        for i in range(-2, game.col -2) :
+            is_valid, max_height, remove_lines, new_holes, new_blocking_bocks, block_edges, floor_edges, wall_edges = self.calcu_nxt_move(i, total_holes, total_blocking_bocks)
         
-        max_height, remove_lines, new_holes, new_blocking_bocks, block_edges, floor_edges, wall_edges = self.calcu_nxt_move(total_holes, total_blocking_bocks)
+            temp[ +4 + 8*(i+2) + 1] = is_valid
+            temp[ +4 + 8*(i+2) + 2] = max_height
+            temp[ +4 + 8*(i+2) + 3] = remove_lines
+            temp[ +4 + 8*(i+2) + 4] = new_holes
+            temp[ +4 + 8*(i+2) + 5] = new_blocking_bocks
+            temp[ +4 + 8*(i+2) + 6] = block_edges
+            temp[ +4 + 8*(i+2) + 7] = floor_edges
+            temp[ +4 + 8*(i+2) + 8] = wall_edges
+
         
-        temp[(game.col * game.row) +6 -1 ] = max_height
-        temp[(game.col * game.row) +7 -1 ] = remove_lines
-        temp[(game.col * game.row) +8 -1 ] = new_holes
-        temp[(game.col * game.row) +9 -1 ] = new_blocking_bocks
-        temp[(game.col * game.row) +10 -1 ] = block_edges
-        temp[(game.col * game.row) +11 -1 ] = floor_edges
-        temp[(game.col * game.row) +12 -1 ] = wall_edges
-        
-        print(remove_lines)
+        # print(temp)
         
         return temp
 

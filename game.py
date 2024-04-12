@@ -1,9 +1,12 @@
+import time
 import os
 import random
 import pygame
 import gameShape
 
 is_background_mode = False
+
+
 
 """
 10 x 20 grid
@@ -295,6 +298,7 @@ def main(window):
     level_time = 0
     score = 0
     last_score = get_max_score()
+    start_time = time.time()
 
     while run:
         # need to constantly make new grid as locked positions always change
@@ -410,6 +414,7 @@ def reset():
     score = 0
     last_score = get_max_score()
     locked_positions = {}
+    start_time = time.time()
 
 def paly_game(action):
     global fall_time, level_time, fall_speed, current_piece, change_piece, window, score, last_score, next_piece, locked_positions
@@ -426,17 +431,12 @@ def paly_game(action):
 
     if level_time/1000 > 5:    # make the difficulty harder every 10 seconds
         level_time = 0
-        # if fall_speed > 1:   # until fall speed is 0.15
-        #     fall_speed -= 0.2
 
     if fall_time / 1000 > fall_speed:
         fall_time = 0
         current_piece.y += 1
         if not valid_space(current_piece, grid) and current_piece.y > 0:
             current_piece.y -= 1
-            # since only checking for down - either reached bottom or hit another piece
-            # need to lock the piece position
-            # need to generate new piece
             change_piece = True
 
     for event in pygame.event.get():
@@ -453,7 +453,10 @@ def paly_game(action):
         if not valid_space(current_piece, grid):
             current_piece.x -= 1
     elif action[1] == 1:
+        # Increase the speed of falling to simulate a 'hard drop'
+        # This gives the AI a reward for placing a piece faster
         current_piece.y += 1
+        fall_speed = 1  # Temporary increase in fall speed for this action
         if not valid_space(current_piece, grid):
             current_piece.y -= 1
     elif action[0] == 1:
@@ -462,33 +465,30 @@ def paly_game(action):
             current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
             
     piece_pos = convert_shape_format(current_piece)
-    # print(piece_pos)
 
     # draw the piece on the grid by giving color in the piece locations
-    y_max = 0
     for i in range(len(piece_pos)):
         x, y = piece_pos[i]
-        y_max = max(y, y_max)
         if y >= 0:
             grid[y][x] = current_piece.color
 
     if change_piece:  # if the piece is locked
         for pos in piece_pos:
             p = (pos[0], pos[1])
-            locked_positions[p] = current_piece.color       # add the key and value in the dictionary
+            locked_positions[p] = current_piece.color
         current_piece = next_piece
         next_piece = get_shape()
         change_piece = False
-        reward = reward + clear_rows(grid, locked_positions) * 10
-        # reward_temp = 0
-        # if reward == 0:
-        #     for i in locked_positions :
-        #         if y_max == i[1]:
-        #             reward_temp += 1
 
-        # reward_temp *= y_max // 5
-        # reward += reward_temp
-        score += reward    # increment score by 10 for every row cleared
+        # Add rewards based on the cleared rows
+        cleared_rows = clear_rows(grid, locked_positions)
+        if cleared_rows > 0:
+            reward += cleared_rows * 100  # Additional reward for clearing rows
+
+        # Reset fall speed after a hard drop
+        fall_speed = 0.1
+
+        score += reward
         update_score(score)
 
         if last_score < score:
@@ -499,10 +499,8 @@ def paly_game(action):
     if not is_background_mode:
         pygame.display.update()
     
-    if check_lost(locked_positions):      
+    if check_lost(locked_positions):
+        # Negative reward for losing the game to discourage game-ending moves
         return -100, True, score-100
 
     return reward, False, score
-
-
-
